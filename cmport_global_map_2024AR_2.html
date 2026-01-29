@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>China Merchants Port - Global Port Network (2024 Annual Report)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a2e; }
+        
+        #map { height: 75vh; width: 100%; }
+        
+        .header {
+            background: linear-gradient(135deg, #0f3460 0%, #16213e 100%);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+        }
+        
+        .header .subtitle {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .stats-container {
+            display: flex;
+            gap: 30px;
+        }
+        
+        .stat-box {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #e94560;
+        }
+        
+        .stat-label {
+            font-size: 0.75rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+        }
+        
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            left: 20px;
+            background: rgba(26, 26, 46, 0.95);
+            padding: 15px 20px;
+            border-radius: 10px;
+            z-index: 1000;
+            color: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            max-width: 320px;
+        }
+        
+        .legend h3 {
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            padding-bottom: 8px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 5px;
+            transition: background 0.2s;
+        }
+        
+        .legend-item:hover {
+            background: rgba(255,255,255,0.1);
+        }
+        
+        .legend-item.inactive {
+            opacity: 0.4;
+        }
+        
+        .legend-color {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 10px;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .legend-text {
+            font-size: 0.8rem;
+        }
+        
+        .legend-count {
+            margin-left: auto;
+            background: rgba(255,255,255,0.15);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.7rem;
+        }
+        
+
+        .footer {
+            background: #16213e;
+            color: white;
+            padding: 15px 30px;
+            font-size: 0.75rem;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .footer a {
+            color: #e94560;
+            text-decoration: none;
+        }
+        
+        .leaflet-popup-content-wrapper {
+            background: rgba(26, 26, 46, 0.95);
+            color: white;
+            border-radius: 8px;
+        }
+        
+        .leaflet-popup-tip {
+            background: rgba(26, 26, 46, 0.95);
+        }
+        
+        .popup-title {
+            font-weight: 600;
+            font-size: 1rem;
+            margin-bottom: 5px;
+        }
+        
+        .popup-country {
+            opacity: 0.8;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+        
+        .popup-type {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        
+        .popup-stake {
+            margin-top: 8px;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+        
+        .source-note {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            font-size: 0.7rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div>
+            <h1>🚢 China Merchants Port Holdings (0144.HK)</h1>
+            <div class="subtitle">Global Port Network - Based on 2024 Annual Report</div>
+        </div>
+        <div class="stats-container">
+            <div class="stat-box">
+                <div class="stat-number">145.7M</div>
+                <div class="stat-label">TEUs (2024)</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">26+</div>
+                <div class="stat-label">Countries</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-number">49%</div>
+                <div class="stat-label">Terminal Link Stake</div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="legend">
+        <h3>Ownership Classification</h3>
+        <div class="legend-item" data-type="subsidiary" onclick="toggleCategory('subsidiary')">
+            <div class="legend-color" style="background: #e94560;"></div>
+            <span class="legend-text">Subsidiaries (>50% control)</span>
+            <span class="legend-count" id="count-subsidiary">0</span>
+        </div>
+        <div class="legend-item" data-type="associate" onclick="toggleCategory('associate')">
+            <div class="legend-color" style="background: #0ea5e9;"></div>
+            <span class="legend-text">Associates (significant influence)</span>
+            <span class="legend-count" id="count-associate">0</span>
+        </div>
+        <div class="legend-item" data-type="jv" onclick="toggleCategory('jv')">
+            <div class="legend-color" style="background: #f59e0b;"></div>
+            <span class="legend-text">Joint Ventures (shared control)</span>
+            <span class="legend-count" id="count-jv">0</span>
+        </div>
+        <div class="legend-item" data-type="terminallink" onclick="toggleCategory('terminallink')">
+            <div class="legend-color" style="background: #8b5cf6;"></div>
+            <span class="legend-text">Terminal Link (49% JV with CMA CGM)</span>
+            <span class="legend-count" id="count-terminallink">0</span>
+        </div>
+        <div class="source-note">
+            Source: CMPort 2024 Annual Report (Notes 41-43)<br>
+            Terminal Link portfolio from CMA CGM disclosures
+        </div>
+    </div>
+    
+
+    
+    <div class="footer">
+        <span>Data as per CMPort 2024 Annual Report | Terminal Link data from CMA CGM disclosures</span>
+        <span>Van Lanschot Kempen - Infrastructure Investment Analysis</span>
+    </div>
+
+    <script>
+        // Initialize map
+        const map = L.map('map', {
+            center: [20, 60],
+            zoom: 2.5,
+            minZoom: 2,
+            maxZoom: 10
+        });
+
+        // Add dark tile layer
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20
+        }).addTo(map);
+
+        // Colors for different categories
+        const colors = {
+            subsidiary: '#e94560',
+            associate: '#0ea5e9',
+            jv: '#f59e0b',
+            terminallink: '#8b5cf6'
+        };
+
+        // PORT DATA - ACCURATE FROM 2024 ANNUAL REPORT (Notes 41-43)
+        const ports = [
+            // ===== SUBSIDIARIES (Note 41) =====
+            // West Shenzhen Port Zone
+            { name: "Shekou Container Terminals", country: "China", lat: 22.4820, lng: 113.9050, type: "subsidiary", stake: "80%", region: "Pearl River Delta" },
+            { name: "Mawan Port", country: "China", lat: 22.5050, lng: 113.8750, type: "subsidiary", stake: "70%", region: "Pearl River Delta" },
+            { name: "Haixing Harbour (Chiwan)", country: "China", lat: 22.4680, lng: 113.8920, type: "subsidiary", stake: "67%", region: "Pearl River Delta" },
+            
+            // Hong Kong
+            { name: "CMCS (HK)", country: "Hong Kong", lat: 22.3193, lng: 114.1694, type: "subsidiary", stake: "100%", region: "Pearl River Delta" },
+            
+            // South-East China
+            { name: "Shantou Port", country: "China", lat: 23.3541, lng: 116.6816, type: "subsidiary", stake: "60%", region: "South-East China" },
+            { name: "Zhangzhou Port", country: "China", lat: 24.5150, lng: 117.6500, type: "subsidiary", stake: "60%", region: "South-East China" },
+            { name: "Xia Men Bay Terminals", country: "China", lat: 24.4500, lng: 118.0800, type: "subsidiary", stake: "31%*", region: "South-East China", note: "*Deemed subsidiary per Note 41(d)" },
+            
+            // Sri Lanka
+            { name: "CICT Colombo", country: "Sri Lanka", lat: 6.9494, lng: 79.8425, type: "subsidiary", stake: "85%", region: "South Asia" },
+            { name: "HIPG Hambantota", country: "Sri Lanka", lat: 6.1240, lng: 81.1185, type: "subsidiary", stake: "65%", region: "South Asia" },
+            { name: "SACL Colombo Logistics", country: "Sri Lanka", lat: 6.9520, lng: 79.8450, type: "subsidiary", stake: "70%", region: "South Asia" },
+            
+            // Africa
+            { name: "LCT Lomé", country: "Togo", lat: 6.1319, lng: 1.2850, type: "subsidiary", stake: "50%*", region: "West Africa", note: "*Deemed subsidiary per Note 41(c)" },
+            
+            // Brazil
+            { name: "TCP Paranaguá", country: "Brazil", lat: -25.5163, lng: -48.5230, type: "subsidiary", stake: "77.45%", region: "South America" },
+            
+            // Indonesia (New in 2024)
+            { name: "NPH Indonesia", country: "Indonesia", lat: -6.0950, lng: 106.8800, type: "subsidiary", stake: "51%", region: "Southeast Asia", note: "Acquired June 2024" },
+            
+            // ===== ASSOCIATES (Note 42) =====
+            // Major Chinese Ports
+            { name: "SIPG Shanghai", country: "China", lat: 31.2050, lng: 121.6500, type: "associate", stake: "28.05%", region: "Yangtze River Delta" },
+            { name: "Liaoning Port", country: "China", lat: 38.9200, lng: 121.6350, type: "associate", stake: "11.36%*", region: "Bohai Rim", note: "*Significant influence per Note 42" },
+            { name: "Tianjin Port Container Terminal", country: "China", lat: 39.0000, lng: 117.7500, type: "associate", stake: "7.31%*", region: "Bohai Rim", note: "*Significant influence per Note 42" },
+            { name: "Zhanjiang Port", country: "China", lat: 21.2000, lng: 110.4000, type: "associate", stake: "27.58%", region: "South-West China" },
+            { name: "Chiwan Container Terminal", country: "China", lat: 22.4700, lng: 113.8900, type: "associate", stake: "14.16%*", region: "Pearl River Delta", note: "*Significant influence per Note 42" },
+            
+            // Hong Kong
+            { name: "MTL Hong Kong", country: "Hong Kong", lat: 22.3250, lng: 114.1500, type: "associate", stake: "27.01%", region: "Pearl River Delta" },
+            { name: "CKRTT", country: "Hong Kong", lat: 22.3100, lng: 114.1600, type: "associate", stake: "20%", region: "Pearl River Delta" },
+            
+            // Taiwan
+            { name: "KMCT Kaohsiung", country: "Taiwan", lat: 22.6100, lng: 120.2900, type: "associate", stake: "20%", region: "Taiwan" },
+            
+            // Africa
+            { name: "PDSA Djibouti", country: "Djibouti", lat: 11.5950, lng: 43.1450, type: "associate", stake: "23.5%", region: "East Africa" },
+            { name: "TICT Tin-Can Nigeria", country: "Nigeria", lat: 6.4350, lng: 3.3600, type: "associate", stake: "28.5%", region: "West Africa" },
+            
+            // Terminal Link (49% Associate)
+            { name: "Terminal Link SAS", country: "France (HQ)", lat: 43.3000, lng: 5.3700, type: "associate", stake: "49%", region: "Global JV", note: "JV with CMA CGM - see purple markers for individual terminals" },
+            
+            // Other Associates
+            { name: "CMIT (IT Services)", country: "China", lat: 22.5200, lng: 113.9300, type: "associate", stake: "43.74%", region: "IT Services" },
+            { name: "Tianjin Haitian Bonded Logistics", country: "China", lat: 39.0100, lng: 117.7400, type: "associate", stake: "49%", region: "Bohai Rim" },
+            
+            // ===== JOINT VENTURES (Note 43) =====
+            { name: "QQCTU Qingdao", country: "China", lat: 36.0671, lng: 120.3826, type: "jv", stake: "50%", region: "Bohai Rim" },
+            { name: "QQTU Qingdao (Bulk)", country: "China", lat: 36.0650, lng: 120.3800, type: "jv", stake: "49%", region: "Bohai Rim" },
+            { name: "Qingdao Port Dongjiakou", country: "China", lat: 35.7500, lng: 119.9500, type: "jv", stake: "25%", region: "Bohai Rim" },
+            { name: "Euro-Asia Oceangate (Kumport)", country: "Turkey", lat: 40.9700, lng: 28.7300, type: "jv", stake: "40%", region: "Mediterranean" },
+            { name: "Port of Newcastle", country: "Australia", lat: -32.9283, lng: 151.7817, type: "jv", stake: "50%", region: "Oceania" },
+            { name: "Asia Airfreight Terminal (HK)", country: "Hong Kong", lat: 22.3080, lng: 113.9150, type: "jv", stake: "34.6%", region: "Air Cargo" },
+            { name: "Red Sea World (Land Development)", country: "Djibouti", lat: 11.5920, lng: 43.1480, type: "jv", stake: "23.5%", region: "East Africa", note: "Land development JV, not port operations" },
+            
+            // ===== TERMINAL LINK PORTFOLIO (21 terminals, CMPort has 49% indirect stake) =====
+            // Original 13 terminals
+            { name: "TL - Bayport Houston", country: "USA", lat: 29.6200, lng: -95.0150, type: "terminallink", stake: "49% via TL", region: "North America" },
+            { name: "TL - Miami", country: "USA", lat: 25.7750, lng: -80.1700, type: "terminallink", stake: "49% via TL", region: "North America" },
+            { name: "TL - Le Havre", country: "France", lat: 49.4900, lng: 0.1200, type: "terminallink", stake: "49% via TL", region: "Northern Europe" },
+            { name: "TL - Montoir", country: "France", lat: 47.2900, lng: -2.1500, type: "terminallink", stake: "49% via TL", region: "Northern Europe" },
+            { name: "TL - Fos-sur-Mer", country: "France", lat: 43.4050, lng: 4.9300, type: "terminallink", stake: "49% via TL", region: "Mediterranean" },
+            { name: "TL - Dunkirk", country: "France", lat: 51.0350, lng: 2.3700, type: "terminallink", stake: "49% via TL", region: "Northern Europe" },
+            { name: "TL - Antwerp Gateway", country: "Belgium", lat: 51.3500, lng: 4.2800, type: "terminallink", stake: "49% via TL", region: "Northern Europe" },
+            { name: "TL - Odessa", country: "Ukraine", lat: 46.4825, lng: 30.7233, type: "terminallink", stake: "49% via TL (50% TL stake)", region: "Black Sea" },
+            { name: "TL - Malta Freeport", country: "Malta", lat: 35.8150, lng: 14.5350, type: "terminallink", stake: "49% via TL", region: "Mediterranean" },
+            { name: "TL - Thessaloniki", country: "Greece", lat: 40.6300, lng: 22.9400, type: "terminallink", stake: "49% via TL", region: "Mediterranean" },
+            { name: "TL - Tangier Med", country: "Morocco", lat: 35.8900, lng: -5.5000, type: "terminallink", stake: "49% via TL", region: "Mediterranean" },
+            { name: "TL - Casablanca", country: "Morocco", lat: 33.6000, lng: -7.6200, type: "terminallink", stake: "49% via TL", region: "Mediterranean" },
+            { name: "TL - Abidjan", country: "Ivory Coast", lat: 5.2950, lng: -4.0100, type: "terminallink", stake: "49% via TL", region: "West Africa" },
+            
+            // Acquired terminals (2020 transaction - added to Terminal Link)
+            { name: "TL - Singapore (CPLT)", country: "Singapore", lat: 1.2650, lng: 103.8200, type: "terminallink", stake: "49% via TL", region: "Southeast Asia" },
+            { name: "TL - Kingston Freeport", country: "Jamaica", lat: 17.9680, lng: -76.8400, type: "terminallink", stake: "49% via TL", region: "Caribbean" },
+            { name: "TL - Rotterdam World Gateway", country: "Netherlands", lat: 51.9550, lng: 4.0500, type: "terminallink", stake: "49% via TL (30% TL stake)", region: "Northern Europe" },
+            { name: "TL - Qingdao Qianwan", country: "China", lat: 36.0500, lng: 120.2200, type: "terminallink", stake: "49% via TL (24% TL stake)", region: "Bohai Rim" },
+            { name: "TL - Vietnam VICT (HCMC)", country: "Vietnam", lat: 10.7400, lng: 106.7500, type: "terminallink", stake: "49% via TL (47.25%)", region: "Southeast Asia" },
+            { name: "TL - Laem Chabang", country: "Thailand", lat: 13.0800, lng: 100.8800, type: "terminallink", stake: "49% via TL (14.5%)", region: "Southeast Asia" },
+            { name: "TL - Umm Qasr", country: "Iraq", lat: 30.0350, lng: 47.9300, type: "terminallink", stake: "49% via TL", region: "Middle East" },
+            { name: "TL - Busan", country: "South Korea", lat: 35.0950, lng: 129.0350, type: "terminallink", stake: "49% via TL", region: "Far East" }
+        ];
+
+        // Layer groups for filtering
+        const layerGroups = {
+            subsidiary: L.layerGroup(),
+            associate: L.layerGroup(),
+            jv: L.layerGroup(),
+            terminallink: L.layerGroup()
+        };
+
+        // Create markers
+        const counts = { subsidiary: 0, associate: 0, jv: 0, terminallink: 0 };
+
+        ports.forEach(port => {
+            const color = colors[port.type];
+            counts[port.type]++;
+            
+            const marker = L.circleMarker([port.lat, port.lng], {
+                radius: port.type === 'terminallink' ? 6 : 8,
+                fillColor: color,
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.85
+            });
+
+            const typeLabels = {
+                subsidiary: 'Subsidiary',
+                associate: 'Associate',
+                jv: 'Joint Venture',
+                terminallink: 'Terminal Link'
+            };
+
+            let popupContent = `
+                <div class="popup-title">${port.name}</div>
+                <div class="popup-country">${port.country} • ${port.region}</div>
+                <div class="popup-type" style="background: ${color};">${typeLabels[port.type]}</div>
+                <div class="popup-stake"><strong>CMPort Stake:</strong> ${port.stake}</div>
+            `;
+            
+            if (port.note) {
+                popupContent += `<div class="popup-stake" style="font-style: italic; opacity: 0.8;">${port.note}</div>`;
+            }
+
+            marker.bindPopup(popupContent);
+            marker.bindTooltip(port.name, { permanent: false, direction: 'top', offset: [0, -5] });
+            
+            layerGroups[port.type].addLayer(marker);
+        });
+
+        // Add all layers to map
+        Object.values(layerGroups).forEach(group => group.addTo(map));
+
+        // Update counts
+        Object.keys(counts).forEach(type => {
+            document.getElementById(`count-${type}`).textContent = counts[type];
+        });
+
+        // Toggle category visibility
+        const activeCategories = { subsidiary: true, associate: true, jv: true, terminallink: true };
+
+        function toggleCategory(type) {
+            activeCategories[type] = !activeCategories[type];
+            const legendItem = document.querySelector(`.legend-item[data-type="${type}"]`);
+            
+            if (activeCategories[type]) {
+                layerGroups[type].addTo(map);
+                legendItem.classList.remove('inactive');
+            } else {
+                map.removeLayer(layerGroups[type]);
+                legendItem.classList.add('inactive');
+            }
+        }
+    </script>
+</body>
+</html>
